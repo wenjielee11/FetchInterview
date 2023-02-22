@@ -42,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
     ListView listView;
     String fetchData;
     ProgressDialog pd;
+    GetMethodDemo getData;
 
 
     @Override
@@ -49,7 +50,8 @@ public class MainActivity extends AppCompatActivity {
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        new JsonTask().execute("https://fetch-hiring.s3.amazonaws.com/hiring.json");
+        getData = new GetMethodDemo();
+        getData.execute("http://fetch-hiring.s3.amazonaws.com/hiring.json");
         HashMap<String, List<String>> JSONData = storeJSONData();
         List<String> displayList = sortJSONData(JSONData);
 
@@ -66,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
 
     public HashMap<String, List<String>> storeJSONData() {
         HashMap<String, List<String>> result = new HashMap<String, List<String>>();
-        String JSONData = fetchData;
+        String JSONData = getData.server_response;
         if(JSONData == null) {
             Log.d("storeJson", "null");
         }
@@ -130,80 +132,22 @@ public class MainActivity extends AppCompatActivity {
 
         return displayList;
     }
-
-    private class JsonTask extends AsyncTask<String, String, String> {
-
-        protected void onPreExecute() {
-            super.onPreExecute();
-
-            pd = new ProgressDialog(MainActivity.this);
-            pd.setMessage("Please wait");
-            pd.setCancelable(false);
-            pd.show();
-        }
-
-        protected String doInBackground(String... params) {
-
-
-            HttpURLConnection connection = null;
-            BufferedReader reader = null;
-
-            try {
-                URL url = new URL(params[0]);
-                Log.d("doinbg: ", "1 ");
-                connection = (HttpURLConnection) url.openConnection();
-                Log.d("doinbg: ", "2 ");
-                connection.connect();
-                Log.d("doinbg: ", "3 ");
-
-                InputStream stream = connection.getInputStream();
-                Log.d("doinbg: ", "4 ");
-                reader = new BufferedReader(new InputStreamReader(stream));
-
-                StringBuffer buffer = new StringBuffer();
-                String line = "";
-                Log.d("doinbg: ", "5 ");
-                while ((line = reader.readLine()) != null) {
-                    buffer.append(line+"\n");
-                    Log.d("Response: ", "> " + line);   //here u ll get whole response...... :-)
-
-                }
-                Log.d("doinbg: ", "6 ");
-
-                return buffer.toString();
-
-
-            } catch (MalformedURLException e) {
-                Log.d("doInBackground Malformed", "yes");
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.d("doInBackground IO", "yes");
-            } finally {
-                if (connection != null) {
-                    connection.disconnect();
-                }
-                try {
-                    if (reader != null) {
-                        reader.close();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+    public String loadJSON(){
+        String json = null;
+        try {
+            InputStream is = getAssets().open("hiring.json");
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+            json = new String(buffer, "UTF-8");
+        } catch (IOException ex) {
+            ex.printStackTrace();
             return null;
         }
-
-        @Override
-        protected void onPostExecute(String result) {
-            super.onPostExecute(result);
-            if (pd.isShowing()){
-                pd.dismiss();
-            }
-            fetchData = result;
-
-        }
+        return json;
     }
+
 }
 
 
