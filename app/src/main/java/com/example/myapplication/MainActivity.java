@@ -47,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
         // Parse and store the data fetched from the URL into a hashmap, to be used by other implementations
         HashMap<String, List<String>> JSONData = storeJSONData(serverResponse);
         // ListView requires a list type to display the items, so we have to sort the items in the hashmap
+        // into a long list
         List<String> displayList = sortJSONData(JSONData);
         //Display the list.
         listView = findViewById(R.id.list);
@@ -108,8 +109,8 @@ public class MainActivity extends AppCompatActivity {
     public List<String> sortJSONData(HashMap<String, List<String>> JSONData) {
         List<String> displayList = new LinkedList<>();
         for (int i = 1; i <= JSONData.size(); i++) {
-            if (JSONData.get("" + i) != null) {
-                JSONData.get("" + i).sort((s1, s2) -> {
+            if (JSONData.get(String.valueOf(i)) != null) {
+                JSONData.get(String.valueOf(i)).sort((s1, s2) -> {
                     // Specialized comparator that compares the item strings and numbers.
                     // Default comparator used by Collections.sort() does not account for digits
                     // after the first digit i.e. item 1XX
