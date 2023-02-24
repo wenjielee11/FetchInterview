@@ -3,6 +3,7 @@ package com.example.myapplication;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import org.json.JSONArray;
@@ -29,7 +30,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     ListView listView; // instance that contains the array of items to be displayed
-    String server_response; // JSON Data fetched from the URL in string format
+    String serverResponse; // JSON Data fetched from the URL in string format
 
     /**
      * Main method that runs all the process(es) required to display the list of items
@@ -44,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
         //wants to data fetch from.
         fetchJSONData("https://fetch-hiring.s3.amazonaws.com/hiring.json");
         // Parse and store the data fetched from the URL into a hashmap, to be used by other implementations
-        HashMap<String, List<String>> JSONData = storeJSONData(server_response);
+        HashMap<String, List<String>> JSONData = storeJSONData(serverResponse);
         // ListView requires a list type to display the items, so we have to sort the items in the hashmap
         List<String> displayList = sortJSONData(JSONData);
         //Display the list.
@@ -97,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * This methood sorts the linked lists of strings by their item names, then by item number.
+     * This method sorts the linked lists of strings by their item names, then by item number.
      * Each list is grouped by their ID.
      * Uses Collections.sort() that is merge sort based. O(n*log n).
      *
@@ -109,7 +110,9 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 1; i <= JSONData.size(); i++) {
             if (JSONData.get("" + i) != null) {
                 JSONData.get("" + i).sort((s1, s2) -> {
-
+                    // Specialized comparator that compares the item strings and numbers.
+                    // Default comparator used by Collections.sort() does not account for digits
+                    // after the first digit i.e. item 1XX
                     String[] s1Parts = s1.split(" +");
                     String[] s2Parts = s2.split(" +");
 
@@ -129,25 +132,26 @@ public class MainActivity extends AppCompatActivity {
                             } else {
                                 return diff;
                             }
-                        } catch (NumberFormatException ex) {
+                        } catch (NumberFormatException e) {
                             // The items are strings, compare them.
                             return s1Parts[i1].compareTo(s2Parts[i1]);
                         }
                     }
                     return -1;
                 });
-                displayList.addAll(JSONData.get("" + i));
+                displayList.addAll(JSONData.get(String.valueOf(i)));
             }
         }
         return displayList;
     }
 
     /**
-     * This method can be used to load a local asset JSON file instead if the user decides to.
+     * This method can be used to load a local asset JSON file instead if the user decides to,
+     * or if connection fails
      *
      * @return JSON data parsed in a string.
      */
-    public String loadJSON() {
+    private String loadJSONAsset() {
         String json = null;
         try {
             InputStream is = getAssets().open("hiring.json");
@@ -172,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private String readStream(InputStream in) {
         BufferedReader reader = null;
-        StringBuffer response = new StringBuffer();
+        StringBuilder response = new StringBuilder();
         try {
             reader = new BufferedReader(new InputStreamReader(in));
             String line = "";
@@ -199,7 +203,7 @@ public class MainActivity extends AppCompatActivity {
      * network operations cannot be done on the main thread.
      * @param param URL to make a HTTP request to.
      */
-    public void fetchJSONData(String param){
+    private void fetchJSONData(String param){
         Thread t = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -209,10 +213,12 @@ public class MainActivity extends AppCompatActivity {
                     HttpURLConnection urlConnection = null;
                     urlConnection = (HttpURLConnection) url.openConnection();
                     urlConnection.setRequestMethod("GET");
-                    server_response = readStream(urlConnection.getInputStream());
+                    serverResponse = readStream(urlConnection.getInputStream());
 
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    // No internet connection, fallback to loading from asset folder
+                    Log.d("HTTP Request failed", "could not connect, loading from assets");
+                    serverResponse = loadJSONAsset();
                 }
             }
         });
